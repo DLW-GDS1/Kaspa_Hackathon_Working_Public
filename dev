@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_NAME="kpay"
+COMPOSE="docker compose -p ${PROJECT_NAME} -f docker-compose.yml"
+
+ensure_env() {
+  if [[ ! -f .env ]]; then
+    echo "No .env found. Creating from .env.example..."
+    cp .env.example .env
+    echo "Created .env. You can edit it if needed."
+  fi
+}
+
+cmd_up() {
+  ensure_env
+  echo "Starting dev stack..."
+  ${COMPOSE} up -d --build
+  echo ""
+  echo "✅ Dev stack is up"
+  echo "Web: http://localhost:${WEB_PORT:-3000}"
+  echo "API: http://localhost:${API_PORT:-8080}"
+}
+
+cmd_down() { ${COMPOSE} down; }
+cmd_logs() { ${COMPOSE} logs -f --tail=200; }
+cmd_status() { ${COMPOSE} ps; }
+cmd_reset() { ${COMPOSE} down -v; ${COMPOSE} up -d --build; }
+cmd_db_migrate() { ${COMPOSE} exec -T api sh -lc "npm run db:migrate"; }
+cmd_db_seed() { ${COMPOSE} exec -T api sh -lc "npm run db:seed"; }
+
+case "${1:-}" in
+  up) cmd_up ;;
+  down) cmd_down ;;
+  logs) cmd_logs ;;
+  status) cmd_status ;;
+  reset) cmd_reset ;;
+  db:migrate) cmd_db_migrate ;;
+  db:seed) cmd_db_seed ;;
+  *)
+    echo "Usage: ./dev {up|down|logs|status|reset|db:migrate|db:seed}"
+    exit 1
+    ;;
+esac
